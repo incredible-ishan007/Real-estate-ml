@@ -29,17 +29,24 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- LOAD DATA ---
-@st.cache_resource
+# --- LOAD DATA (FIXED) ---
 def load_data():
-    with open('datasets/df.pkl','rb') as file:
-        df = pickle.load(file)
-    with open('datasets/pipeline.pkl','rb') as file:
-        pipeline = pickle.load(file)
-    return df, pipeline
+    try:
+        with open('datasets/df.pkl','rb') as file:
+            df = pickle.load(file)
+
+        with open('datasets/pipeline.pkl','rb') as file:
+            pipeline = pickle.load(file)
+
+        return df, pipeline
+
+    except Exception as e:
+        st.error(f"❌ Error loading model/data: {e}")
+        st.stop()
 
 df, pipeline = load_data()
 
+# --- TITLE ---
 st.title('🏠 Gurgaon Real Estate Price Predictor')
 st.write("Fill in the details below to estimate the property value.")
 
@@ -47,7 +54,6 @@ st.write("Fill in the details below to estimate the property value.")
 with st.container():
     st.subheader('Property Specifications')
     
-    # Organized into 3 columns
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -70,33 +76,39 @@ with st.container():
 
 # --- PREDICTION LOGIC ---
 st.markdown("---")
+
 if st.button('Estimate Price'):
-    
-    # Form data
-    data = [[property_type, sector, bedrooms, bathroom, balcony, property_age, built_up_area, servant_room, store_room, furnishing_type, luxury_category, floor_category]]
-    columns = ['property_type', 'sector', 'bedRoom', 'bathroom', 'balcony',
-               'agePossession', 'built_up_area', 'servant room', 'store room',
-               'furnishing_type', 'luxury_category', 'floor_category']
+    try:
+        # Prepare input
+        data = [[property_type, sector, bedrooms, bathroom, balcony, property_age,
+                 built_up_area, servant_room, store_room,
+                 furnishing_type, luxury_category, floor_category]]
 
-    one_df = pd.DataFrame(data, columns=columns)
+        columns = ['property_type', 'sector', 'bedRoom', 'bathroom', 'balcony',
+                   'agePossession', 'built_up_area', 'servant room', 'store room',
+                   'furnishing_type', 'luxury_category', 'floor_category']
 
-    # Predict
-    base_price = np.expm1(pipeline.predict(one_df))[0]
-    low = base_price - 0.22
-    high = base_price + 0.22
+        one_df = pd.DataFrame(data, columns=columns)
 
-    # --- DISPLAY RESULTS ---
-    st.balloons()
-    
-    st.markdown(f"""
-        <div class="result-card">
-            <h2 style='color: #31333F;'>Estimated Price Range</h2>
-            <h1 style='color: #ff4b4b;'>₹ {round(low,2)} Cr - ₹ {round(high,2)} Cr</h1>
-            <p style='color: #555;'>*Price estimates are based on current market data and model accuracy.</p>
-        </div>
+        # Predict
+        base_price = np.expm1(pipeline.predict(one_df))[0]
+        low = base_price - 0.22
+        high = base_price + 0.22
+
+        # --- DISPLAY RESULTS ---
+        st.balloons()
+
+        st.markdown(f"""
+            <div class="result-card">
+                <h2 style='color: #31333F;'>Estimated Price Range</h2>
+                <h1 style='color: #ff4b4b;'>₹ {round(low,2)} Cr - ₹ {round(high,2)} Cr</h1>
+                <p style='color: #555;'>*Price estimates are based on current market data and model accuracy.</p>
+            </div>
         """, unsafe_allow_html=True)
-    
-    # Adding Metric visualization
-    m1, m2 = st.columns(2)
-    m1.metric("Average Price", f"₹ {round(base_price, 2)} Cr")
-    m2.metric("Area", f"{built_up_area} Sq.Ft")
+
+        m1, m2 = st.columns(2)
+        m1.metric("Average Price", f"₹ {round(base_price, 2)} Cr")
+        m2.metric("Area", f"{built_up_area} Sq.Ft")
+
+    except Exception as e:
+        st.error(f"❌ Prediction failed: {e}")
